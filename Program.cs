@@ -1,3 +1,3 @@
 ﻿
-using var game = new Boss_Projekt.Game1();
+using var game = new Boss.Game1();
 game.Run();
