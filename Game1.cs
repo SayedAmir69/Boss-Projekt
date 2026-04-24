@@ -33,7 +33,7 @@ namespace Boss
 
         private MouseState _prevMouse;
 
-        private Dictionary<char, int[]> _font;
+        private Dictionary<char, string[]> _font;
 
         public Game1()
         {
@@ -136,53 +136,43 @@ namespace Boss
             {
                 if (_btnStill.Contains(mouse.Position))
                 {
-                    var t = typeof(Boss).Assembly.GetType("Boss.ManualStillState");
-                    if (t != null) _boss?.ChangeState((IState)Activator.CreateInstance(t));
+                    if (_boss != null) _boss.ChangeState(new ManualStillState());
                 }
                 else if (_btnManualPhase1Idle.Contains(mouse.Position))
                 {
-                    var t = typeof(Boss).Assembly.GetType("Boss.ManualPhase1IdleState");
-                    if (t != null) _boss?.ChangeState((IState)Activator.CreateInstance(t));
+                    if (_boss != null) _boss.ChangeState(new ManualPhase1IdleState());
                 }
                 else if (_btnManualPhase1Shoot.Contains(mouse.Position))
                 {
-                    var t = typeof(Boss).Assembly.GetType("Boss.ManualPhase1ShootState");
-                    if (t != null) _boss?.ChangeState((IState)Activator.CreateInstance(t));
+                    if (_boss != null) _boss.ChangeState(new ManualPhase1ShootState());
                 }
                 else if (_btnManualPhase2Charge.Contains(mouse.Position))
                 {
-                    var t = typeof(Boss).Assembly.GetType("Boss.ManualPhase2ChargeState");
-                    if (t != null) _boss?.ChangeState((IState)Activator.CreateInstance(t));
+                    if (_boss != null) _boss.ChangeState(new ManualPhase2ChargeState());
                 }
                 else if (_btnManualPhase2Spawn.Contains(mouse.Position))
                 {
-                    var t = typeof(Boss).Assembly.GetType("Boss.ManualPhase2SpawnState");
-                    if (t != null) _boss?.ChangeState((IState)Activator.CreateInstance(t));
+                    if (_boss != null) _boss.ChangeState(new ManualPhase2SpawnState());
                 }
                 else if (_btnAutoP1Idle.Contains(mouse.Position))
                 {
-                    var t = typeof(Boss).Assembly.GetType("Boss.Phase1IdleState");
-                    if (t != null) _boss?.ChangeState((IState)Activator.CreateInstance(t));
+                    if (_boss != null) _boss.ChangeState(new Phase1IdleState());
                 }
                 else if (_btnAutoP1Shoot.Contains(mouse.Position))
                 {
-                    var t = typeof(Boss).Assembly.GetType("Boss.Phase1ShootState");
-                    if (t != null) _boss?.ChangeState((IState)Activator.CreateInstance(t));
+                    if (_boss != null) _boss.ChangeState(new Phase1ShootState());
                 }
                 else if (_btnAutoP2Charge.Contains(mouse.Position))
                 {
-                    var t = typeof(Boss).Assembly.GetType("Boss.Phase2ChargeState");
-                    if (t != null) _boss?.ChangeState((IState)Activator.CreateInstance(t));
+                    if (_boss != null) _boss.ChangeState(new Phase2ChargeState());
                 }
                 else if (_btnAutoP2Spawn.Contains(mouse.Position))
                 {
-                    var t = typeof(Boss).Assembly.GetType("Boss.Phase2SpawnState");
-                    if (t != null) _boss?.ChangeState((IState)Activator.CreateInstance(t));
+                    if (_boss != null) _boss.ChangeState(new Phase2SpawnState());
                 }
                 else if (_btnAutoP3Orbit.Contains(mouse.Position))
                 {
-                    var t = typeof(Boss).Assembly.GetType("Boss.Phase3OrbitState");
-                    if (t != null) _boss?.ChangeState((IState)Activator.CreateInstance(t));
+                    if (_boss != null) _boss.ChangeState(new Phase3OrbitState());
                 }
             }
 
@@ -190,17 +180,16 @@ namespace Boss
 
             if (Keyboard.GetState().IsKeyDown(Keys.Space))
             {
-                var f = typeof(Boss).GetField("Health", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                if (f != null)
+                if (_boss != null)
                 {
-                    int hp = (int)f.GetValue(_boss);
+                    int hp = _boss.Health;
                     hp -= (int)(50 * gameTime.ElapsedGameTime.TotalSeconds);
                     if (hp < 0) hp = 0;
-                    f.SetValue(_boss, hp);
+                    _boss.Health = hp;
                 }
             }
 
-            _boss?.Update(gameTime);
+            if (_boss != null) _boss.Update(gameTime);
 
             base.Update(gameTime);
         }
@@ -210,7 +199,7 @@ namespace Boss
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
             _spriteBatch.Begin();
-            _boss?.Draw(_spriteBatch);
+            if (_boss != null) _boss.Draw(_spriteBatch);
 
             int headerScale = 4;
             var leftHeaderSize = MeasureText(_manualHeader, headerScale);
@@ -258,33 +247,32 @@ namespace Boss
 
         private void BuildFont()
         {
-            _font = new Dictionary<char, int[]>();
-            _font['A'] = new[] { 2, 5, 7, 5, 5 };
-            _font['B'] = new[] { 6, 5, 6, 5, 6 };
-            _font['C'] = new[] { 3, 4, 4, 4, 3 };
-            _font['D'] = new[] { 6, 5, 5, 5, 6 };
-            _font['E'] = new[] { 7, 4, 6, 4, 7 };
-            _font['G'] = new[] { 3, 4, 5, 5, 3 };
-            _font['H'] = new[] { 5, 5, 7, 5, 5 };
-            _font['I'] = new[] { 7, 2, 2, 2, 7 };
-            _font['L'] = new[] { 4, 4, 4, 4, 7 };
-            _font['N'] = new[] { 5, 7, 7, 7, 5 };
-            _font['O'] = new[] { 2, 5, 5, 5, 2 };
-            _font['P'] = new[] { 6, 5, 6, 4, 4 };
-            _font['R'] = new[] { 6, 5, 6, 5, 5 };
-            _font['S'] = new[] { 3, 4, 2, 1, 6 };
-            _font['T'] = new[] { 7, 2, 2, 2, 2 };
-            _font['W'] = new[] { 5, 5, 5, 7, 5 };
-            _font['D'] = new[] { 6, 5, 5, 5, 6 };
+            // Simple font using 3x5 patterns represented as strings of '1' and '0'
+            _font = new Dictionary<char, string[]>();
+            _font['A'] = new[] { "010", "101", "111", "101", "101" };
+            _font['B'] = new[] { "110", "101", "110", "101", "110" };
+            _font['C'] = new[] { "011", "100", "100", "100", "011" };
+            _font['D'] = new[] { "110", "101", "101", "101", "110" };
+            _font['E'] = new[] { "111", "100", "110", "100", "111" };
+            _font['G'] = new[] { "011", "100", "101", "101", "011" };
+            _font['H'] = new[] { "101", "101", "111", "101", "101" };
+            _font['I'] = new[] { "111", "010", "010", "010", "111" };
+            _font['L'] = new[] { "100", "100", "100", "100", "111" };
+            _font['N'] = new[] { "101", "111", "111", "111", "101" };
+            _font['O'] = new[] { "010", "101", "101", "101", "010" };
+            _font['P'] = new[] { "110", "101", "110", "100", "100" };
+            _font['R'] = new[] { "110", "101", "110", "101", "101" };
+            _font['S'] = new[] { "011", "100", "010", "001", "110" };
+            _font['T'] = new[] { "111", "010", "010", "010", "010" };
+            _font['W'] = new[] { "101", "101", "101", "111", "101" };
 
-            _font['M'] = new[] { 5, 7, 7, 7, 5 };
-            _font['U'] = new[] { 5, 5, 5, 5, 7 };
+            _font['M'] = new[] { "101", "111", "111", "101", "101" };
+            _font['U'] = new[] { "101", "101", "101", "101", "111" };
 
-            _font['1'] = new[] { 2, 6, 2, 2, 7 };
-            _font['2'] = new[] { 7, 1, 7, 4, 7 };
+            _font['1'] = new[] { "010", "110", "010", "010", "111" };
+            _font['2'] = new[] { "111", "001", "111", "100", "111" };
 
-            _font[' '] = new[] { 0, 0, 0, 0, 0 };
-            _font['?'] = new[] { 7, 1, 2, 0, 2 };
+            _font[' '] = new[] { "000", "000", "000", "000", "000" };
         }
 
         private Vector2 MeasureText(string text, int scale)
@@ -305,21 +293,25 @@ namespace Boss
             for (int i = 0; i < text.Length; i++)
             {
                 char c = text[i];
-                if (!_font.ContainsKey(c)) c = '?';
-                if (_font.ContainsKey(c))
+                string[] rows;
+                if (!_font.ContainsKey(c))
                 {
-                    var rows = _font[c];
-                    for (int ry = 0; ry < 5; ry++)
+                    rows = _font[' '];
+                }
+                else
+                {
+                    rows = _font[c];
+                }
+
+                for (int ry = 0; ry < 5; ry++)
+                {
+                    string row = rows[ry];
+                    for (int rx = 0; rx < 3; rx++)
                     {
-                        int row = rows[ry];
-                        for (int rx = 0; rx < 3; rx++)
+                        if (row[rx] == '1')
                         {
-                            bool on = ((row >> (2 - rx)) & 1) == 1;
-                            if (on)
-                            {
-                                var r = new Rectangle((int)(x + rx * scale), (int)(pos.Y + ry * scale), scale, scale);
-                                _spriteBatch.Draw(_pixel, r, color);
-                            }
+                            var r = new Rectangle((int)(x + rx * scale), (int)(pos.Y + ry * scale), scale, scale);
+                            _spriteBatch.Draw(_pixel, r, color);
                         }
                     }
                 }

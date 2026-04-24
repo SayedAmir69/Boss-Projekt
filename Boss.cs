@@ -11,6 +11,10 @@ namespace Boss
         public Vector2 Position;
         public int Health = 100;
 
+        // expose pixel and bounds for simple access
+        public Texture2D Pixel => _pixel;
+        public Rectangle Bounds => _bounds;
+
         private Texture2D _pixel;
         private Rectangle _bounds;
         private Color _color = Color.Red;
@@ -47,7 +51,7 @@ namespace Boss
                 ChangeState(new Phase2ChargeState());
             }
 
-            _currentState?.Update(this, gameTime);
+            if (_currentState != null) _currentState.Update(this, gameTime);
 
             // update bullets
             for (int i = _bullets.Count - 1; i >= 0; i--)
@@ -71,16 +75,18 @@ namespace Boss
 
             // draw bullets
             foreach (var b in _bullets)
+            {
                 b.Draw(sb, _pixel);
+            }
 
-            _currentState?.Draw(this, sb);
+            if (_currentState != null) _currentState.Draw(this, sb);
         }
 
         public void ChangeState(IState newState)
         {
-            _currentState?.Exit(this);
+            if (_currentState != null) _currentState.Exit(this);
             _currentState = newState;
-            _currentState?.Enter(this);
+            if (_currentState != null) _currentState.Enter(this);
         }
 
         // helper to spawn bullets
@@ -93,6 +99,11 @@ namespace Boss
         public float RandomFloat(float min, float max)
         {
             return (float)(_rng.NextDouble() * (max - min) + min);
+        }
+
+        public void SetColor(Color c)
+        {
+            _color = c;
         }
 
         // internal bullet class
@@ -249,14 +260,7 @@ namespace Boss
         {
             // draw an indicator: boss brighter when shooting
             // We'll tint it by drawing an overlay
-            sb.Draw(bossPixel(boss), new Rectangle((int)boss.Position.X, (int)boss.Position.Y, 100, 60), Color.Orange);
-        }
-
-        // helper to access boss's pixel (hacky but avoids exposing it)
-        private Texture2D bossPixel(Boss b)
-        {
-            var t = typeof(Boss).GetField("_pixel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(b) as Texture2D;
-            return t;
+            sb.Draw(boss.Pixel, new Rectangle((int)boss.Position.X, (int)boss.Position.Y, 100, 60), Color.Orange);
         }
     }
 
@@ -269,8 +273,8 @@ namespace Boss
         public void Update(Boss boss, GameTime gameTime)
         {
             boss.Position.X += _dir * 30f * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            // use boss bounds via reflection
-            var bounds = (Rectangle)typeof(Boss).GetField("_bounds", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(boss);
+            // use boss bounds
+            var bounds = boss.Bounds;
             float minX = bounds.Left + 20;
             float maxX = bounds.Right - 120;
             if (boss.Position.X < minX) { boss.Position.X = minX; _dir = 1; }
@@ -300,12 +304,7 @@ namespace Boss
         }
         public void Draw(Boss boss, SpriteBatch sb)
         {
-            sb.Draw(bossPixel(boss), new Rectangle((int)boss.Position.X, (int)boss.Position.Y, 100, 60), Color.Orange * 0.8f);
-        }
-        private Texture2D bossPixel(Boss b)
-        {
-            var t = typeof(Boss).GetField("_pixel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(b) as Texture2D;
-            return t;
+            sb.Draw(boss.Pixel, new Rectangle((int)boss.Position.X, (int)boss.Position.Y, 100, 60), Color.Orange * 0.8f);
         }
     }
 
@@ -316,14 +315,13 @@ namespace Boss
         public override void Enter(Boss boss)
         {
             // change color to indicate phase 2
-            var f = typeof(Boss).GetField("_color", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            f.SetValue(boss, Color.Purple);
+            boss.SetColor(Color.Purple);
         }
         public override void Exit(Boss boss) { }
         public override void Update(Boss boss, GameTime gameTime)
         {
             boss.Position.X += _dir * _speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            var bounds = (Rectangle)typeof(Boss).GetField("_bounds", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(boss);
+            var bounds = boss.Bounds;
             float minX = bounds.Left + 10;
             float maxX = bounds.Right - 100;
             if (boss.Position.X < minX) { boss.Position.X = minX; _dir = 1; }
@@ -370,8 +368,7 @@ namespace Boss
             _duration = 5.0;
             _spawnTimer = 0.03;
             _angle = 0f;
-            var f = typeof(Boss).GetField("_color", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            f.SetValue(boss, Color.SteelBlue);
+            boss.SetColor(Color.SteelBlue);
         }
 
         public override void Exit(Boss boss) { }
@@ -422,7 +419,7 @@ namespace Boss
             {
                 _burstTimer = 0.6;
                 // teleport to a random x position near top
-                var bounds = (Rectangle)typeof(Boss).GetField("_bounds", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(boss);
+                var bounds = boss.Bounds;
                 float nx = boss.RandomFloat(bounds.Left + 20, bounds.Right - 120);
                 boss.Position = new Vector2(nx, 40);
 
@@ -454,8 +451,7 @@ namespace Boss
         {
             _duration = 6.0;
             _spawnTimer = 0.0;
-            var f = typeof(Boss).GetField("_color", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            f.SetValue(boss, Color.DarkRed);
+            boss.SetColor(Color.DarkRed);
         }
 
         public override void Exit(Boss boss) { }
@@ -468,7 +464,7 @@ namespace Boss
             if (_spawnTimer <= 0)
             {
                 _spawnTimer = 0.06; // fast rain
-                var bounds = (Rectangle)typeof(Boss).GetField("_bounds", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(boss);
+                var bounds = boss.Bounds;
                 float x = boss.RandomFloat(bounds.Left + 10, bounds.Right - 10);
                 var pos = new Vector2(x, -10);
                 var vel = new Vector2(0, boss.RandomFloat(180f, 360f));
@@ -535,8 +531,7 @@ namespace Boss
             _duration = 1.5;
             _speed = 300f;
             // change color to indicate phase 2
-            var f = typeof(Boss).GetField("_color", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            f.SetValue(boss, Color.Purple);
+            boss.SetColor(Color.Purple);
             // start near top center
             boss.Position = new Vector2(boss.Position.X, 30);
         }
